@@ -2,7 +2,7 @@
   "name": "fancyt-jsv",
   "displayName": "FancyT JSV",
   "description": "nonr",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.83.0"
   },
@@ -14,18 +14,149 @@
   "contributes": {
     "commands": [
       {
-        "command": "fancyt-jsv.validateJson",
-        "title": "Validate JSON file"
+        "command": "schemaProvider.validateAll",
+        "title": "Validate all JSON files against their schemas",
+        "category": "Validate",
+
+        "icon": {"light": "src/media/light/Validate.png", "dark": "src/media/dark/Validate.png"}
+
       },
       {
-        "command": "fancyt-jsv.validateChosen",
-        "title": "Validate chosen JSON file"
+        "command": "schemaProvider.validateAllAttached",
+        "title": "Validate all JSON files attached to the schema",
+        "category": "Validate",
+
+				"icon": {"light": "src/media/light/Validate.png", "dark": "src/media/dark/Validate.png"}
       },
       {
-        "command": "fancyt-jsv.chooseSchema",
-        "title": "chooseSchema"
+        "command": "schemaProvider.validateOne",
+        "title": "Validate a JSON file",
+        "category": "Validate",
+
+				"icon": {"light": "src/media/light/Validate.png", "dark": "src/media/dark/Validate.png"}
+      },
+      {
+        "command": "schemaProvider.addSchemas",
+        "title": "Add schemas",
+        "category": "Schema",
+
+				"icon": {"light": "src/media/light/Add.svg", "dark": "src/media/dark/Add.svg"}
+      },
+      {
+        "command": "schemaProvider.addJSONs",
+        "title": "Attach JSON file to schema",
+        "category": "Schema"
+      },
+      {
+        "command": "schemaProvider.addJSONsOnButton",
+        "title": "Attach JSON file to schema",
+
+        "icon": {"light": "src/media/light/Add.svg", "dark": "src/media/dark/Add.svg"}
+      },
+      {
+        "command": "schemaProvider.removeNode",
+        "title": "Remove entry",
+        "category": "Schema",
+
+        "icon": {"light": "src/media/light/Remove.svg", "dark": "src/media/dark/Remove.svg"}
+
+      },
+      {
+        "command": "schemaProvider.changeSchema",
+        "title": "Change schema",
+        "category": "Schema"
+      },
+      {
+        "command": "schemaProvider.changeSchemaOnRMB",
+        "title": "Change schema"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "schemaProvider.removeNode",
+          "when": "false"
+        },
+        {
+          "command": "schemaProvider.addJSONsOnButton",
+          "when": "false"
+        },
+        {
+          "command": "schemaProvider.validateOne",
+          "when": "false"
+        },
+        {
+          "command": "schemaProvider.validateAllAttached",
+          "when": "false"
+        },
+        {
+          "command": "schemaProvider.validateAll",
+          "when": "false"
+        },
+        {
+          "command": "schemaProvider.addSchemas",
+          "when": "false"
+        },
+        {
+          "command": "schemaProvider.changeSchemaOnRMB",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "schemaProvider.validateAll",
+          "when": "view == schemaProvider",
+          "group": "navigation"
+        },
+        {
+          "command": "schemaProvider.addSchemas",
+          "when": "view == schemaProvider",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "schemaProvider.removeNode",
+          "when": "view == schemaProvider && (viewItem == schemaProvider.tree.json || viewItem == schemaProvider.tree.schema)",
+          "group": "inline"
+        },
+        {
+          "command": "schemaProvider.changeSchemaOnRMB",
+          "when": "view == schemaProvider && viewItem == schemaProvider.tree.schema"
+        },
+        {
+          "command": "schemaProvider.addJSONsOnButton",
+          "when": "view == schemaProvider && viewItem == schemaProvider.tree.schema",
+          "group": "inline"
+        },
+        {
+          "command": "schemaProvider.validateOne",
+          "when": "view == schemaProvider && viewItem == schemaProvider.tree.json",
+          "group": "inline"
+        },
+        {
+          "command": "schemaProvider.validateAllAttached",
+          "when": "view == schemaProvider && viewItem == schemaProvider.tree.schema",
+          "group": "inline"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "schemaProvider",
+        "contents": "No schemas found [learn more](https://www.json-schema.org/).\n[Add schema](command:schemaProvider.addSchemas)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "schemaProvider",
+          "name": "Schemas",
+          "icon": "src/media/Icon.svg",
+          "contextualTitle": "Schema Tree"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
