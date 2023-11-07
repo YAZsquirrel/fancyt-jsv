@@ -7,7 +7,6 @@ import { JSONNode } from './JSONNode';
 import { SchemaNode } from './SchemaNode';
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('Congratulations, your extension "FancyT JSV" is now active!');
 	let provider = new SchemaTreeProvider(); 
 	let treeView = vscode.window.createTreeView('schemaProvider', {
 		'treeDataProvider' : provider,

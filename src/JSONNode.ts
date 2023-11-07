@@ -32,6 +32,10 @@ export class JSONNode implements INode {
         return this.schema;
     }
 
+    validate(){
+        this.schema.validateOne(this);
+    }
+
     getParent(): INode | Promise<INode> {
         return this.schema;
     }

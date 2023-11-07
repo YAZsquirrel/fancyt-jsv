@@ -1,14 +1,11 @@
 import { TreeDataProvider, TextDocument, InputBoxOptions, window, TextDocumentContentChangeEvent, commands, workspace, TreeItem, CancellationToken, Event, ProviderResult, Uri, TreeDragAndDropController, DataTransfer, EventEmitter, ExtensionContext, TreeItemCollapsibleState, CancellationTokenSource } from 'vscode'; 
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-import AJV from 'ajv';
+
 import { INode } from './INode';
 import {JSONNode} from './JSONNode';
 import { SchemaNode } from './SchemaNode';
-import * as fs from 'fs';
 import * as path from 'path';
-
-const ajv:AJV = new AJV();
 
 export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndDropController<INode>
 {
@@ -82,20 +79,17 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
 
 	validateAllInSchema(schema: SchemaNode): void 
     {
-        window.showInformationMessage(`Validate all in schema ${schema.getLabel}`);
-
-        console.log (`${Uri.file(schema.getPath)} + ${schema.getPath}` );
+        schema.validateAll();
 	}
 
     validateAll(): void 
     {
-		window.showInformationMessage('Validate all');
         this.schemas.forEach(x => x.validateAll());
 	}
 
     validateOne(json: JSONNode): void 
     {
-        console.log (`${Uri.parse(json.getPath)} + ${json.getPath}` );
+        json.validate();
     }
     
     // >Schema: Change schema
@@ -138,7 +132,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
                 'canSelectMany': false,
                 'filters' : {
                     'JSON' : ['json', 'schema.json'],
-                    'Any' : []
+                    'Any' : ['*']
                 }
             });
 
@@ -246,7 +240,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
                 'canSelectMany': true,
                 'filters' : {
                     'JSON' : ['json'],
-                    'Any' : []
+                    'Any' : ['*']
                 }
             });
     

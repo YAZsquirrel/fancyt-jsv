@@ -17,30 +17,37 @@
         "command": "schemaProvider.validateAll",
         "title": "Validate all JSON files against their schemas",
         "category": "Validate",
-
-        "icon": {"light": "src/media/light/Validate.png", "dark": "src/media/dark/Validate.png"}
-
+        "icon": {
+          "light": "src/media/light/Validate.png",
+          "dark": "src/media/dark/Validate.png"
+        }
       },
       {
         "command": "schemaProvider.validateAllAttached",
         "title": "Validate all JSON files attached to the schema",
         "category": "Validate",
-
-				"icon": {"light": "src/media/light/Validate.png", "dark": "src/media/dark/Validate.png"}
+        "icon": {
+          "light": "src/media/light/Validate.png",
+          "dark": "src/media/dark/Validate.png"
+        }
       },
       {
         "command": "schemaProvider.validateOne",
         "title": "Validate a JSON file",
         "category": "Validate",
-
-				"icon": {"light": "src/media/light/Validate.png", "dark": "src/media/dark/Validate.png"}
+        "icon": {
+          "light": "src/media/light/Validate.png",
+          "dark": "src/media/dark/Validate.png"
+        }
       },
       {
         "command": "schemaProvider.addSchemas",
         "title": "Add schemas",
         "category": "Schema",
-
-				"icon": {"light": "src/media/light/Add.svg", "dark": "src/media/dark/Add.svg"}
+        "icon": {
+          "light": "src/media/light/Add.svg",
+          "dark": "src/media/dark/Add.svg"
+        }
       },
       {
         "command": "schemaProvider.addJSONs",
@@ -50,16 +57,19 @@
       {
         "command": "schemaProvider.addJSONsOnButton",
         "title": "Attach JSON file to schema",
-
-        "icon": {"light": "src/media/light/Add.svg", "dark": "src/media/dark/Add.svg"}
+        "icon": {
+          "light": "src/media/light/Add.svg",
+          "dark": "src/media/dark/Add.svg"
+        }
       },
       {
         "command": "schemaProvider.removeNode",
         "title": "Remove entry",
         "category": "Schema",
-
-        "icon": {"light": "src/media/light/Remove.svg", "dark": "src/media/dark/Remove.svg"}
-
+        "icon": {
+          "light": "src/media/light/Remove.svg",
+          "dark": "src/media/dark/Remove.svg"
+        }
       },
       {
         "command": "schemaProvider.changeSchema",

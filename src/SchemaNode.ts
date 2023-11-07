@@ -1,10 +1,11 @@
-import { InputBoxOptions, TreeItem, TreeItemCheckboxState, TreeItemCollapsibleState, Uri, window } from 'vscode';
+import { TreeItem, TreeItemCheckboxState, TreeItemCollapsibleState, Uri, window } from 'vscode';
 import * as path from 'path';
 import { INode } from './INode';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import { JSONNode } from './JSONNode';
-import AJV from 'ajv';
-export const ajv:AJV = new AJV();
+import AJV, { ValidateFunction } from 'ajv';
+import * as MetaSchemaLast from "ajv/dist/refs/json-schema-2020-12";
+import { log } from 'console';
 
 export class SchemaNode implements INode {
     private jsons: JSONNode[] = [];
@@ -14,11 +15,7 @@ export class SchemaNode implements INode {
         private label: string,
         private path: string
     ) {
-        // this.command = {
-        //     command: 'vscode.open',
-        //     title: 'open selected',
-        //     arguments: [file]
-        // };
+        this.ajv.addMetaSchema(MetaSchemaLast);
     }
 
     get getLabel() {
@@ -98,7 +95,7 @@ export class SchemaNode implements INode {
                 arguments: [Uri.file(this.path)]
 
             },
-            iconPath: path.join(__dirname, '../../src/media/Schema.svg')
+            iconPath: Uri.file(path.join(__dirname, '../../src/media/Schema.svg'))
         };
     }
 
@@ -106,41 +103,80 @@ export class SchemaNode implements INode {
         return this.jsons;
     }
 
-    async validateAll(): Promise<void> {
-        const options: InputBoxOptions = {
-            title: "Choose file to validate",
-            prompt: "Enter file path",
-            placeHolder: "some json file",
-            ignoreFocusOut: true
-        };
+    ajv:AJV = new AJV(
+        {
+            allErrors : true,
+            strict: "log"
+        });
 
-        let input = await window.showInputBox(options);
+    async validateJson(validate: ValidateFunction, jsonnode: JSONNode): Promise<void>
+    {
+        try 
+        { 
 
-        if (input === undefined) { return; }
+            let content = await fs.readFile(jsonnode.getPath);
+            let json = JSON.parse(content.toString());
+            
+            let result = validate(json);
+            if (validate.errors && !result){
+                window.showWarningMessage(`\'${jsonnode.getLabel}\' is not valid against \'${this.label}\'`);
+                log(`\n\'${jsonnode.getLabel}\' is not valid against \'${this.label}\'`);
 
-        if (!fs.existsSync(input!)) {
-            window.showErrorMessage(`File ${input} not found!`);
-            return;
-        }
-
-
-        window.showInformationMessage(input);
-        try {
-
-            let content = fs.readFileSync(input);
-
-            let file = JSON.parse(content.toString());
-            let errors = ajv.errorsText();
-
-            if (errors.length > 0) {
-                window.showErrorMessage(errors);
+                validate.errors.forEach(x => log(x));
             }
-            window.activeTextEditor?.document.fileName;
-            window.showInformationMessage('File succesfully been read.');
-
+            else if (result) {
+                window.showInformationMessage(`\'${jsonnode.getLabel}\' is valid against \'${this.label}\'`);
+            }
         }
         catch (ex) {
-            window.showErrorMessage((ex as Error).message);
+            window.showErrorMessage(`Error \'${(ex as Error).message}\'
+             occured when tried to validate \'${jsonnode.getLabel}\' against schema \'${this.label}\'.`);
+        }
+    }
+    
+    async validateOne(json: JSONNode): Promise<void>
+    {
+        try {
+
+            let content = await fs.readFile(this.getPath);
+
+            let schema = JSON.parse(content.toString());
+            delete schema['$schema'];
+            let validate = this.ajv.compile(schema);
+
+            //this.validateJson(validate, json);
+            
+        }
+        catch (ex) {
+            window.showErrorMessage(`Error \'${(ex as Error).message}\' occured when tried to validate against schema \'${this.label}\'.`);
+        }
+        
+        let errors = this.ajv.errors;
+        if (errors) {
+            errors.forEach(x => 
+                x.message ? 
+                window.showErrorMessage(x.message) : 
+                `Unknown error occured during validation against schema \'${this.getLabel}\'` );
+        }
+    }
+
+    async validateAll(): Promise<void>{
+        try {
+
+            let content = await fs.readFile(this.getPath);
+
+            let schema = JSON.parse(content.toString());
+            delete schema['$schema'];
+            let props = schema['properties'];
+
+            //let validate = validator(schema, {'allErrors' : true, 'includeErrors' : true});
+            let validate = this.ajv.compile(schema);
+
+            this.attachedJsons.forEach(x => this.validateJson(validate, x));
+            
+        }
+        catch (ex) {
+            window.showErrorMessage(`Error \'${(ex as Error).message}\' occured when tried to validate against schema \'${this.label}\'.`);
         }
     }
 }
