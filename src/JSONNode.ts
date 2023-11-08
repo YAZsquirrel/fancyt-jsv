@@ -54,7 +54,7 @@ export class JSONNode implements INode {
             },
             checkboxState: TreeItemCheckboxState.Unchecked,
 
-            iconPath: path.join(__dirname, "../../src/media/Json.svg")
+            iconPath: path.join(__dirname, "../src/media/Json.svg")
         };
     }
     getChildren(): INode[] | Promise<INode[]> {

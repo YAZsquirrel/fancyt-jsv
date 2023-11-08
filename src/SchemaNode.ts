@@ -1,4 +1,4 @@
-import { TreeItem, TreeItemCheckboxState, TreeItemCollapsibleState, Uri, window } from 'vscode';
+import { EventEmitter, Event, TreeItem, TreeItemCheckboxState, TreeItemCollapsibleState, Uri, window, ThemeIcon, ThemeColor } from 'vscode';
 import * as path from 'path';
 import { INode } from './INode';
 import * as fs from 'fs/promises';
@@ -95,7 +95,7 @@ export class SchemaNode implements INode {
                 arguments: [Uri.file(this.path)]
 
             },
-            iconPath: Uri.file(path.join(__dirname, '../../src/media/Schema.svg'))
+            iconPath: Uri.file(path.join(__dirname, '../src/media/Schema.svg'))// new ThemeIcon("bracket", new ThemeColor("icon.foreground"))
         };
     }
 
@@ -108,6 +108,10 @@ export class SchemaNode implements INode {
             allErrors : true,
             strict: "log"
         });
+    
+    private _onDidValidation: EventEmitter< | undefined | void> = new EventEmitter< | undefined | void>();
+	readonly onDidValidation: Event< | undefined | void> = this._onDidValidation.event;
+
 
     async validateJson(validate: ValidateFunction, jsonnode: JSONNode): Promise<void>
     {
@@ -144,7 +148,7 @@ export class SchemaNode implements INode {
             delete schema['$schema'];
             let validate = this.ajv.compile(schema);
 
-            //this.validateJson(validate, json);
+            this.validateJson(validate, json);
             
         }
         catch (ex) {
@@ -167,9 +171,7 @@ export class SchemaNode implements INode {
 
             let schema = JSON.parse(content.toString());
             delete schema['$schema'];
-            let props = schema['properties'];
 
-            //let validate = validator(schema, {'allErrors' : true, 'includeErrors' : true});
             let validate = this.ajv.compile(schema);
 
             this.attachedJsons.forEach(x => this.validateJson(validate, x));
