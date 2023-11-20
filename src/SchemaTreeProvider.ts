@@ -7,7 +7,6 @@ import {JSONNode} from './JSONNode';
 import { SchemaNode } from './SchemaNode';
 import * as path from 'path';
 import { ValidationErrorsHandler } from './ValidationErrorsHandler';
-import { SrvRecord } from 'dns';
 
 export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndDropController<INode>
 {
@@ -31,8 +30,6 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         {
             let validateOnChange = await this.context?.secrets.get('validateOnChange');
             ValidationErrorsHandler.validateOnChange = validateOnChange === 'true';
-
-            //console.log(`Saved settings: ${validateOnChange + ' ' +  WhichValidate[parseInt(whichValidate ?? '')]}`);
         }
 
         {

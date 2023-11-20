@@ -67,7 +67,9 @@ export class ValidationErrorsHandler implements vscode.Disposable
 
             }
             else if (this.schema?.attachedJsons.some(x => x.getUri.fsPath === uri.fsPath)) {
-                await this.schema?.validateOne(this.schema?.attachedJsons.find(x => x.getUri.fsPath === uri.fsPath)!, this.cts.token);
+                let json = this.schema?.attachedJsons.find(x => x.getUri.fsPath === uri.fsPath);
+                await json?.parse();
+                await this.schema?.validateOne(json!, this.cts.token);
 
             }
         }
