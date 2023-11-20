@@ -92,12 +92,12 @@
         "title": "Change schema"
       },
       {
-        "command": "schemaProvider.validateOnChange",
-        "title": "Switch validation on document change",
+        "command": "schemaProvider.setValidateOnChange",
+        "title": "Switch validation on document edit",
         "category": "FancyT/Settings"
       },
       {
-        "command": "schemaProvider.validateMarkedOrAll",
+        "command": "schemaProvider.setValidateMarkedOrAll",
         "title": "Switch what should be validated",
         "category": "FancyT/Settings"
       }

@@ -29,8 +29,8 @@ export function activate(context: ExtensionContext) {
 		commands.registerCommand('schemaProvider.changeSchemaOnRMB', async (schema: SchemaNode) => await provider.changeSchemaToAnother(schema)),
 		
 		// Settings
-		commands.registerCommand('schemaProvider.validateOnChange', () => provider.setIfToValidateOnChange()),
-		commands.registerCommand('schemaProvider.validateMarkedOrAll', async () => await provider.setIfToValidateMarkedOrAll()),
+		commands.registerCommand('schemaProvider.setValidateOnChange', () => provider.setIfToValidateOnChange()),
+		commands.registerCommand('schemaProvider.setValidateMarkedOrAll', async () => await provider.setIfToValidateMarkedOrAll()),
 
 		// Validation commands
 		commands.registerCommand('schemaProvider.validateOne', async (node: JSONNode) => await provider.validateOne(node)),

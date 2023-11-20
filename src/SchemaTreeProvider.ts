@@ -364,8 +364,9 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
 
     setIfToValidateOnChange()
     {
-        ValidationErrorsHandler.validateOnChange = this.settings.validateOnChange !== this.settings.validateOnChange;
+        ValidationErrorsHandler.validateOnChange = this.settings.validateOnChange = !this.settings.validateOnChange;
         this.context?.secrets.store('validateOnChange', this.settings.validateOnChange.toString());
+        window.showInformationMessage(`Validation ${ this.settings.validateOnChange ? 'will' : 'won\'t'} occur on edit`);
 
     }
 

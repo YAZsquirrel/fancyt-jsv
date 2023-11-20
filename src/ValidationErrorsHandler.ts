@@ -37,8 +37,6 @@ export class ValidationErrorsHandler implements vscode.Disposable
 
     cts: vscode.CancellationTokenSource = new vscode.CancellationTokenSource();
     private subscribeToDocUpdate() {
-        let c = 0;
-
         ValidationErrorsHandler.context?.subscriptions.push(
             vscode.workspace.onDidChangeTextDocument((args) => {
                 
