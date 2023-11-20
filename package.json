@@ -12,6 +12,17 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "colors": [
+      {
+          "id": "editorManager.treeItemError",
+          "description": "Color for a TreeIteem label",
+          "defaults": {
+              "dark": "#ca6666", 
+              "light": "#ca6666",
+              "highContrast": "errorForeground" 
+          }
+      }
+  ],
     "commands": [
       {
         "command": "schemaProvider.validateAll",
@@ -79,6 +90,16 @@
       {
         "command": "schemaProvider.changeSchemaOnRMB",
         "title": "Change schema"
+      },
+      {
+        "command": "schemaProvider.validateOnChange",
+        "title": "Switch validation on document change",
+        "category": "FancyT/Settings"
+      },
+      {
+        "command": "schemaProvider.validateMarkedOrAll",
+        "title": "Switch what should be validated",
+        "category": "FancyT/Settings"
       }
     ],
     "menus": {

@@ -1,21 +1,21 @@
-import { TreeItem, TreeItemCheckboxState, TreeItemCollapsibleState, Uri } from 'vscode';
+import { EventEmitter, Event, TreeItem, TreeItemCheckboxState, TreeItemCollapsibleState, Uri, CancellationToken, workspace } from 'vscode';
 import * as path from 'path';
 import { INode } from './INode';
 import { SchemaNode } from './SchemaNode';
+import * as fs from 'fs/promises';
 
 export class JSONNode implements INode {
     public readonly collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
+    private _jsonChanged: EventEmitter<void> = new EventEmitter<void>();
+    readonly jsonChanged: Event<void> = this._jsonChanged.event;
+    
     constructor(
         private label: string,
         private path: string,
         public schema: SchemaNode
         
     ) {
-        // this.command = {
-        //     command: 'vscode.open',
-        //     title: 'open selected',
-        //     arguments: [file]
-        // };
+        this.parse();
     }
 
     get getLabel(){
@@ -27,13 +27,33 @@ export class JSONNode implements INode {
         return this.path;
     }
 
+    get getUri() {
+        return Uri.file(path.join(this.path));
+    }
+
     get getSchema(): SchemaNode
     {
         return this.schema;
     }
 
-    validate(){
-        this.schema.validateOne(this);
+    async validate(){
+        await this.schema.validateOne(this, undefined);
+    }
+
+    private json: any;
+
+    get getJson(): any
+    {
+        return this.json;
+    }
+
+    async parse(){
+        if (!this.path) {throw new Error(`File \'${this.path}\' does not exist`);}
+        
+        let content = await fs.readFile(this.getPath);
+        let text = workspace.textDocuments.find(x => x.uri.fsPath === this.getPath)?.getText() ?? content.toString();
+
+        this.json = JSON.parse(text);
     }
 
     getParent(): INode | Promise<INode> {
@@ -52,7 +72,7 @@ export class JSONNode implements INode {
                 arguments: [Uri.file(this.path)]
                 
             },
-            checkboxState: TreeItemCheckboxState.Unchecked,
+            //checkboxState: TreeItemCheckboxState.Unchecked,
 
             iconPath: path.join(__dirname, "../src/media/Json.svg")
         };

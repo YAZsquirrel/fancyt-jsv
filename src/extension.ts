@@ -1,14 +1,14 @@
 'use strict';
 
-import * as vscode from 'vscode';
+import { ExtensionContext, commands, window } from 'vscode';
 import { SchemaTreeProvider } from './SchemaTreeProvider';
 import { INode } from './INode';
 import { JSONNode } from './JSONNode';
 import { SchemaNode } from './SchemaNode';
 
-export function activate(context: vscode.ExtensionContext) {
-	let provider = new SchemaTreeProvider(); 
-	let treeView = vscode.window.createTreeView('schemaProvider', {
+export function activate(context: ExtensionContext) {
+	let provider = new SchemaTreeProvider(context);  
+	let treeView = window.createTreeView('schemaProvider', {
 		'treeDataProvider' : provider,
 		'canSelectMany' : true,
 		'dragAndDropController' : provider,
@@ -21,22 +21,26 @@ export function activate(context: vscode.ExtensionContext) {
 		treeView,
 		
 		// gui
-		vscode.commands.registerCommand('schemaProvider.addSchemas', async () => await provider.addSchemas()),
-		vscode.commands.registerCommand('schemaProvider.addJSONs', async () => await provider.addJSONsToSchema()),
-		vscode.commands.registerCommand('schemaProvider.addJSONsOnButton', async (schema: SchemaNode) => await provider.addJSONs(schema)),
-		vscode.commands.registerCommand('schemaProvider.removeNode', (node: INode) => provider.removeNode(node)),
-		vscode.commands.registerCommand('schemaProvider.changeSchema', async () => await provider.changeSchema()),
-		vscode.commands.registerCommand('schemaProvider.changeSchemaOnRMB', async (schema: SchemaNode) => await provider.changeSchemaToAnother(schema)),
+		commands.registerCommand('schemaProvider.addSchemas', async () => await provider.addSchemas()),
+		commands.registerCommand('schemaProvider.addJSONs', async () => await provider.addJSONsToSchema()),
+		commands.registerCommand('schemaProvider.addJSONsOnButton', async (schema: SchemaNode) => await provider.addJSONs(schema)),
+		commands.registerCommand('schemaProvider.removeNode', (node: INode) => provider.removeNode(node)),
+		commands.registerCommand('schemaProvider.changeSchema', async () => await provider.changeSchema()),
+		commands.registerCommand('schemaProvider.changeSchemaOnRMB', async (schema: SchemaNode) => await provider.changeSchemaToAnother(schema)),
 		
+		// Settings
+		commands.registerCommand('schemaProvider.validateOnChange', () => provider.setIfToValidateOnChange()),
+		commands.registerCommand('schemaProvider.validateMarkedOrAll', async () => await provider.setIfToValidateMarkedOrAll()),
+
 		// Validation commands
-		vscode.commands.registerCommand('schemaProvider.validateOne', (node: JSONNode) => provider.validateOne(node)),
-		vscode.commands.registerCommand('schemaProvider.validateAll', () => provider.validateAll()),
-		vscode.commands.registerCommand('schemaProvider.validateAllAttached', (schema: SchemaNode) => provider.validateAllInSchema(schema)),
+		commands.registerCommand('schemaProvider.validateOne', async (node: JSONNode) => await provider.validateOne(node)),
+		commands.registerCommand('schemaProvider.validateAll', async () => await provider.validateAll()),
+		commands.registerCommand('schemaProvider.validateAllAttached', async (schema: SchemaNode) => await provider.validateAllInSchema(schema)),
 	];
 
-	disposables.forEach(x => {context.subscriptions.push(x);});
-}
+	context.subscriptions.push(...disposables);
 
+}
 export function deactivate() {}
 
 

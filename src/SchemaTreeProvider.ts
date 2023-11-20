@@ -1,14 +1,65 @@
-import { TreeDataProvider, window,  TreeItem, CancellationToken, Event, ProviderResult, TreeDragAndDropController, DataTransfer, EventEmitter } from 'vscode'; 
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
+/* eslint-disable curly */
+/* eslint-disable @typescript-eslint/naming-convention */
+import { TreeDataProvider, window,  TreeItem, CancellationToken, Event, ProviderResult, TreeDragAndDropController, DataTransfer, EventEmitter, ExtensionContext, Uri } from 'vscode'; 
 
 import { INode } from './INode';
 import {JSONNode} from './JSONNode';
 import { SchemaNode } from './SchemaNode';
 import * as path from 'path';
+import { ValidationErrorsHandler } from './ValidationErrorsHandler';
+import { SrvRecord } from 'dns';
 
 export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndDropController<INode>
 {
+    constructor (private context: ExtensionContext) { 
+        this.restoreSettings();  
+        ValidationErrorsHandler.setContext = this.context;     
+    }
+    private async restoreSettings()
+    {
+        let whichValidate = await this.context?.secrets.get('validateMarkedOrAll');
+        if (whichValidate)
+        {   
+            let which: number | undefined = parseInt(whichValidate); 
+
+            if (which)
+            {
+                this.settings.validateMarkedOrAll = which;
+            }
+        }
+        
+        {
+            let validateOnChange = await this.context?.secrets.get('validateOnChange');
+            ValidationErrorsHandler.validateOnChange = validateOnChange === 'true';
+
+            //console.log(`Saved settings: ${validateOnChange + ' ' +  WhichValidate[parseInt(whichValidate ?? '')]}`);
+        }
+
+        {
+            let savedTree = await this.context?.secrets.get('savedTree');
+            
+            if (!savedTree) 
+                return;
+
+            this.tree = JSON.parse(savedTree);
+
+            let schemas = this.tree.map(x => Uri.file(path.join(x.path)));
+            this.addSchemasByUri(schemas!);
+            
+            this.tree?.forEach(async x => {
+                let jsons = x.jsonList.map(json => Uri.file(path.join(json)));
+                this.schemas.find(s => s.getPath === x.path)?.addJSONsByUris(jsons);
+            });
+            
+        }
+    }
+    
+    tree: TreeRoot[] = [];
+
+    saveTree(){
+        this.context?.secrets.store('savedTree', JSON.stringify(this.tree));    
+    }
+
 
     schemas: SchemaNode[] = [];
     dropMimeTypes = [];
@@ -50,28 +101,38 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             }
         });
 
+        
         if (!uris) 
         {
             window.showInformationMessage('You selected nothing!');
             return;
         }
+        
+        let paths: TreeRoot[] = uris.map((x): TreeRoot => {return {path: x.fsPath, jsonList: []};})
+                                    .filter(x => !this.tree.find(t => t.path === x.path), this);
+        
+        this.tree?.push(...paths);
+        this.saveTree();
+        this.addSchemasByUri(uris);
+    }
 
-        for (let uri of uris)
-        {
+    private addSchemasByUri(uris: Uri[]) {
+        for (let uri of uris) {
             let isAdded = false;
-            for (let schema of this.schemas)
-            {
+            for (let schema of this.schemas) {
                 let schemaPath = schema.getPath;
-                if (isAdded = schemaPath === uri.fsPath) 
-                {
-                    window.showInformationMessage(`Schema \"${uri.fsPath}\" was already added!`);                    
+                if (isAdded = schemaPath === uri.fsPath) {
+                    window.showInformationMessage(`Schema \"${uri.fsPath}\" was already added!`);
                     break;
                 }
             }
-            
-            if (isAdded) {continue;}
 
-            let schema = new SchemaNode(path.basename(uri.fsPath), uri.fsPath);
+            if (isAdded) { continue; }
+
+            let errorHandler = new ValidationErrorsHandler();
+            
+
+            let schema = new SchemaNode(path.basename(uri.fsPath), uri.fsPath, errorHandler);
             this.schemas.push(schema);
         }
         this._onDidChangeTreeData.fire();
@@ -84,12 +145,12 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
 
     validateAll(): void 
     {
-        this.schemas.forEach(x => x.validateAll());
+        this.schemas.forEach(async x => await x.validateAll());
 	}
 
-    validateOne(json: JSONNode): void 
+    async validateOne(json: JSONNode): Promise<void> 
     {
-        json.validate();
+        await json.validate();
     }
     
     // >Schema: Change schema
@@ -144,6 +205,8 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         
         if (uri[0].fsPath === schema.getPath) { return; }
 
+        let idx = this.tree.findIndex(x => x.path === schema.getPath);
+
         let exist: boolean = false;
 
         for (let schema2 of this.schemas)
@@ -153,16 +216,28 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             {
                 let result = await window.showWarningMessage(
                     `Schema \"${uri[0].fsPath}\" is already in the tree! What you want to move JSONs from \'${schema.getPath}\' to \'${uri[0].fsPath}\' and remove?`, 
-                    "Yes", "No");  
+                    "Yes", "No"); 
+
+                let idx2 = this.tree?.findIndex(x => x.path === schemaPath);
                 
                 if (result === 'Yes')
                 {
-                    //schema.attachedJsons.concat(schema2.attachedJsons);
                     schema2.addJSONs(schema.attachedJsons);
+
+                    if (idx2)
+                    {
+                        let jsons = schema.attachedJsons
+                                        .map(x => x.getPath)
+                                        .filter(x => !this.tree[idx].jsonList.find(t => t === x) 
+                                                  && !(this.tree[idx].path === x), this);
+                        this.tree[idx2].jsonList.push(...jsons);
+                    }
 
                     this.removeNode(schema);
                     this._onDidChangeTreeData.fire();
                 }
+
+                this.tree.splice(idx!, 1);
 
                 return;
             }
@@ -171,8 +246,13 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         if (!exist)
         {
             schema.changeSchema(path.basename(uri[0].fsPath), uri[0].fsPath);
-        }
 
+            if (idx)
+            {
+                this.tree[idx].path = uri[0].fsPath;
+            }    
+        }
+        this.saveTree();
         this._onDidChangeTreeData.fire();
                 
     }
@@ -181,20 +261,32 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
     {
         if (node instanceof SchemaNode)
         {
-            let index = this.schemas.indexOf(node as SchemaNode);
+            let index = this.schemas.indexOf(node);
+            let idx = this.tree.findIndex(x => x.path === node.getPath);
+
             if (index > -1) 
             {
+                this.schemas[index].onRemove();
                 this.schemas.splice(index, 1);
+                this.tree.splice(idx!, 1);
             }   
+            node!.getErrorHandler!.clearErrors();
             this._onDidChangeTreeData.fire();
         }
         else if (node instanceof JSONNode)
         {
             let json = node as JSONNode;
             let index = json.getSchema.attachedJsons.indexOf(json);
+            json.getSchema.getErrorHandler!.clearJsonErrors(json.getUri);
+
+            let schema_idx = this.tree.findIndex(x => x.path === json.getSchema.getPath);
+            
+            let idx = this.tree[schema_idx!].jsonList.findIndex(x => x === node.getPath);
+
             if (index > -1) 
             {
                 json.getSchema.attachedJsons.splice(index, 1);
+                this.tree[schema_idx!].jsonList.splice(idx!, 1);
             }
             this._onDidChangeTreeData.fire();
         }
@@ -202,6 +294,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         {
             throw new Error('Trying to remove nothing');
         }
+        this.saveTree();
     }
 
     async addJSONsToSchema(): Promise<void>
@@ -216,8 +309,8 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             return;
         }
 
-        let labels: string[] = [];
-        this.schemas.forEach(x => labels.push(x.getLabel));
+        let labels = this.schemas.map((x, a, b) => x.getLabel);
+        //this.schemas.forEach(x => labels.push(x.getLabel));
 
         let label = await window.showQuickPick(labels, 
         {
@@ -249,11 +342,79 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             window.showInformationMessage('You selected nothing!');
             return;
         }
+
+        let schema_idx = this.tree.findIndex(x => x.path === schema.getPath);
+
+        let paths = uris.map(x => x.fsPath)
+                        .filter(x => !this.tree[schema_idx].jsonList.find(t => t === x) 
+                                     && !(this.tree[schema_idx].path === x), this);
+        this.tree[schema_idx!].jsonList.push(...paths);
+
         schema.addJSONsByUris(uris);
 
+        this.saveTree();
         this._onDidChangeTreeData.fire();
     }
 
+    private settings: STPSettings =
+    {
+        validateOnChange: true,
+        validateMarkedOrAll: WhichValidate.All
+    };
+
+    setIfToValidateOnChange()
+    {
+        ValidationErrorsHandler.validateOnChange = this.settings.validateOnChange !== this.settings.validateOnChange;
+        this.context?.secrets.store('validateOnChange', this.settings.validateOnChange.toString());
+
+    }
+
+    async setIfToValidateMarkedOrAll()
+    {
+        let labels = ['Marked', 'All', 'Only (attached) JSONs'];
+
+        let label = await window.showQuickPick(labels, 
+            {
+                'canPickMany' : false, 
+                'ignoreFocusOut' : true, 
+                'title': `Choose which file should be validated (Now is: ${labels[this.settings.validateMarkedOrAll]})`
+            });
+    
+        if (!label) {return;}
+    
+        let index = labels.indexOf(label);
+
+        switch(index)
+        {
+            case 0: 
+                this.settings.validateMarkedOrAll = WhichValidate.Marked;
+                break;
+            case 1: this.settings.validateMarkedOrAll = WhichValidate.All;
+                break;
+            case 2: this.settings.validateMarkedOrAll = WhichValidate.OnlyJsons;
+                break;
+             
+        }
+        this.context?.secrets.store('validateMarkedOrAll', this.settings.validateMarkedOrAll.toString());
+        
+        
+    }
 }
 
+enum WhichValidate {
+    Marked,
+    All,
+    OnlyJsons
+}
+
+type STPSettings = {
+    validateOnChange: boolean,
+    validateMarkedOrAll: WhichValidate,
+    
+}
+
+type TreeRoot = {
+    path: string,
+    jsonList: string[]
+}
 

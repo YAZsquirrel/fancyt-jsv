@@ -1,21 +1,39 @@
-import { EventEmitter, Event, TreeItem, TreeItemCheckboxState, TreeItemCollapsibleState, Uri, window, ThemeIcon, ThemeColor } from 'vscode';
+/* eslint-disable curly */
+import { EventEmitter, TreeItem, Event, workspace, TreeItemCollapsibleState, Uri, window, CancellationToken, CancellationError} from 'vscode';
 import * as path from 'path';
 import { INode } from './INode';
 import * as fs from 'fs/promises';
 import { JSONNode } from './JSONNode';
-import AJV, { ValidateFunction } from 'ajv';
-import * as MetaSchemaLast from "ajv/dist/refs/json-schema-2020-12";
-import { log } from 'console';
+import ajv, { ValidateFunction } from 'ajv/dist/2020';
+import { ValidationErrorsHandler } from './ValidationErrorsHandler';
+import * as metaSchema2019 from "ajv/dist/refs/json-schema-2019-09";
 
 export class SchemaNode implements INode {
+    //static treeProvider: Dia;
+    
     private jsons: JSONNode[] = [];
     public readonly collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.Expanded;
+    private _schemaChanged: EventEmitter<void> = new EventEmitter<void>();
+    readonly schemaChanged: Event<void> = this._schemaChanged.event;
 
     constructor(
         private label: string,
-        private path: string
+        private path: string,
+        private errorHandler?: ValidationErrorsHandler 
     ) {
-        this.ajv.addMetaSchema(MetaSchemaLast);
+        errorHandler ??= new ValidationErrorsHandler();
+        errorHandler.setSchema = this;
+        this.schemaChanged.bind(errorHandler.onSchemaChange);
+
+        this.update();
+    }
+
+    onRemove(){
+        this.errorHandler?.dispose();
+    }
+
+    get getErrorHandler() {
+        return this.errorHandler;
     }
 
     get getLabel() {
@@ -24,6 +42,10 @@ export class SchemaNode implements INode {
 
     get getPath() {
         return this.path;
+    }
+
+    get getUri() {
+        return Uri.file(path.join(this.path));
     }
 
     get attachedJsons(): JSONNode[] {
@@ -49,6 +71,8 @@ export class SchemaNode implements INode {
             let json = new JSONNode(path.basename(uri.fsPath), uri.fsPath, this);
             this.attachedJsons.push(json);
         }
+        this.errorHandler!.setJsons = this.jsons; 
+
     }
 
     addJSONs(jsons: JSONNode[]) {
@@ -69,11 +93,26 @@ export class SchemaNode implements INode {
             json.schema = this;
             this.attachedJsons.push(json);
         }
+        this.errorHandler!.setJsons = this.jsons; 
+
     }
 
     changeSchema(label: string, path: string) {
         this.label = label;
         this.path = path;
+        this.update();
+        this.errorHandler!.setJsons = this.jsons;
+        this._schemaChanged.fire(); 
+    }
+
+    async update(token?: CancellationToken | undefined): Promise<void>
+    {
+        if (token && token?.isCancellationRequested)
+            //return Promise.reject().catch(() => console.log('update canceled'));
+            throw new CancellationError();      
+            
+        await this.loadSchema(token);
+        await this.setValidate(token);
     }
 
     getParent(): INode | Promise<INode> | null {
@@ -81,19 +120,19 @@ export class SchemaNode implements INode {
     }
 
     getTreeItem(): TreeItem | Promise<TreeItem> {
+
         return {
             label: this.label,
             collapsibleState: this.collapsibleState,
             contextValue: 'schemaProvider.tree.schema',
             tooltip: this.path,
             description: 'JSON Schema',
-            checkboxState: TreeItemCheckboxState.Unchecked,
-
+            // checkboxState: TreeItemCheckboxState.Unchecked,
+            
             command: {
                 command: 'vscode.open',
                 title: 'Opens this JSON file',
                 arguments: [Uri.file(this.path)]
-
             },
             iconPath: Uri.file(path.join(__dirname, '../src/media/Schema.svg'))// new ThemeIcon("bracket", new ThemeColor("icon.foreground"))
         };
@@ -103,82 +142,123 @@ export class SchemaNode implements INode {
         return this.jsons;
     }
 
-    ajv:AJV = new AJV(
+    ajv:ajv = new ajv(
         {
             allErrors : true,
-            strict: "log"
-        });
-    
-    private _onDidValidation: EventEmitter< | undefined | void> = new EventEmitter< | undefined | void>();
-	readonly onDidValidation: Event< | undefined | void> = this._onDidValidation.event;
+            strict: true,
+            verbose: true
+        })
+        .addMetaSchema(require("ajv/dist/refs/json-schema-2019-09"))
+        .addMetaSchema(require("ajv/dist/refs/json-schema-draft-07.json"));;
+ 
+    private schema: any;
+    private validate: ValidateFunction | undefined;
 
+    async setValidate(token: CancellationToken | undefined) : Promise<void>
+    {
+        if (!this.schema) {return;}
+        
+        try {
+            let schemaValidationResult = await this.ajv.validateSchema(this.schema, false);
 
-    async validateJson(validate: ValidateFunction, jsonnode: JSONNode): Promise<void>
+            if (token && token?.isCancellationRequested)
+                //return Promise.reject().catch(() => console.log('schema validation canceled'));
+                throw new CancellationError();
+
+            let errors = this.ajv.errors;
+            await this.errorHandler!.handleSchemaErrors(errors, token);
+
+            if (!schemaValidationResult)
+            {
+                return;
+            }
+            
+            this.validate = this.ajv.compile(this.schema);
+
+            if (!this.validate) {throw new Error(`Schema's validate function was invalid \(${this.getLabel}\)`);}
+                
+        } catch (ex ) {
+            if (ex instanceof CancellationError) 
+                throw ex;
+            else if (ex instanceof Error)
+            {
+                let message = (ex as Error).message;
+
+                // errorHandler.handleStrictErrors(message);
+                if (message.startsWith('strict mode:', 0))
+                {
+                    message = message.slice('strict mode:'.length + 1, message.indexOf('(strictTypes)'));
+                }
+
+                window.showErrorMessage(`Error \'${message}\' occured when tried to validate schema \'${this.label}\'.`);
+            }
+        }
+    }
+
+    async loadSchema(token: CancellationToken | undefined): Promise<void>
+    {
+        try {
+                      
+            let content = await fs.readFile(this.getPath);
+            let text = workspace.textDocuments.find(x => x.uri.fsPath === this.getPath)?.getText() ?? content.toString();
+
+            if (token && token?.isCancellationRequested)
+                //return Promise.reject().catch(() => console.log('load canceled'));
+                throw new CancellationError();
+
+            this.schema = JSON.parse(text);
+            delete this.schema['$schema'];
+        }
+        catch (ex) {
+            if (ex instanceof CancellationError) throw ex;
+            else if (ex instanceof Error)
+            {
+                window.showErrorMessage(`Error \'${ex.message}\' occured when tried to parse schema \'${this.label}\'.`);
+                throw ex;
+            }
+        }
+    }
+
+    async validateJson(jsonnode: JSONNode, token: CancellationToken | undefined): Promise<void>
     {
         try 
         { 
-
-            let content = await fs.readFile(jsonnode.getPath);
-            let json = JSON.parse(content.toString());
             
-            let result = validate(json);
-            if (validate.errors && !result){
-                window.showWarningMessage(`\'${jsonnode.getLabel}\' is not valid against \'${this.label}\'`);
-                log(`\n\'${jsonnode.getLabel}\' is not valid against \'${this.label}\'`);
-
-                validate.errors.forEach(x => log(x));
+            if (!this.validate) 
+            {
+                await this.update(token);
             }
-            else if (result) {
+            if (token && token?.isCancellationRequested)
+                //return Promise.reject().catch(() => console.log('validate json inside canceled'));
+                throw new CancellationError();
+
+            let result = this.validate!(jsonnode.getJson);
+            await this.errorHandler!.handleJsonErrors(jsonnode, this.validate!.errors, token);
+
+            if (result) {
                 window.showInformationMessage(`\'${jsonnode.getLabel}\' is valid against \'${this.label}\'`);
             }
         }
         catch (ex) {
-            window.showErrorMessage(`Error \'${(ex as Error).message}\'
-             occured when tried to validate \'${jsonnode.getLabel}\' against schema \'${this.label}\'.`);
+            if (ex instanceof CancellationError) throw ex;
+            else if (ex instanceof Error){
+                window.showErrorMessage(`Error \'${(ex as Error).message}\'
+                    occured when tried to validate \'${jsonnode.getLabel}\' against schema \'${this.label}\'.`);
+                throw ex;
+            }
         }
     }
     
-    async validateOne(json: JSONNode): Promise<void>
+    async validateOne(json: JSONNode, token: CancellationToken | undefined): Promise<void>
     {
-        try {
+        if (token && token?.isCancellationRequested)
+            //return Promise.reject().catch(() => console.log('validate json canceled'));
+            throw new CancellationError();
 
-            let content = await fs.readFile(this.getPath);
-
-            let schema = JSON.parse(content.toString());
-            delete schema['$schema'];
-            let validate = this.ajv.compile(schema);
-
-            this.validateJson(validate, json);
-            
-        }
-        catch (ex) {
-            window.showErrorMessage(`Error \'${(ex as Error).message}\' occured when tried to validate against schema \'${this.label}\'.`);
-        }
-        
-        let errors = this.ajv.errors;
-        if (errors) {
-            errors.forEach(x => 
-                x.message ? 
-                window.showErrorMessage(x.message) : 
-                `Unknown error occured during validation against schema \'${this.getLabel}\'` );
-        }
+        await this.validateJson(json, token);
     }
 
     async validateAll(): Promise<void>{
-        try {
-
-            let content = await fs.readFile(this.getPath);
-
-            let schema = JSON.parse(content.toString());
-            delete schema['$schema'];
-
-            let validate = this.ajv.compile(schema);
-
-            this.attachedJsons.forEach(x => this.validateJson(validate, x));
-            
-        }
-        catch (ex) {
-            window.showErrorMessage(`Error \'${(ex as Error).message}\' occured when tried to validate against schema \'${this.label}\'.`);
-        }
+        this.attachedJsons.forEach(async x => await this.validateJson(x, undefined));
     }
 }
