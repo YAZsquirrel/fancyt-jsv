@@ -236,7 +236,7 @@ export class SchemaNode implements INode {
             await this.errorHandler!.handleJsonErrors(jsonnode, this.validate!.errors, token);
 
             if (result) {
-                window.showInformationMessage(`\'${jsonnode.getLabel}\' is valid against \'${this.label}\'`);
+                console.log(`\'${jsonnode.getLabel}\' is valid against \'${this.label}\'`);
             }
         }
         catch (ex) {

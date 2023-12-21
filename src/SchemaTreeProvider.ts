@@ -135,7 +135,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         this._onDidChangeTreeData.fire();
     }
 
-	validateAllInSchema(schema: SchemaNode): void 
+	async validateAllInSchema(schema: SchemaNode) 
     {
         schema.validateAll();
 	}
@@ -409,10 +409,10 @@ type STPSettings = {
     validateOnChange: boolean,
     validateMarkedOrAll: WhichValidate,
     
-}
+};
 
 type TreeRoot = {
     path: string,
     jsonList: string[]
-}
+};
 

@@ -2,7 +2,7 @@
   "name": "fancyt-jsv",
   "displayName": "FancyT JSV",
   "description": "nonr",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "engines": {
     "vscode": "^1.83.0"
   },

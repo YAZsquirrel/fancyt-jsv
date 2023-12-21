@@ -10,7 +10,7 @@ export function activate(context: ExtensionContext) {
 	let provider = new SchemaTreeProvider(context);  
 	let treeView = window.createTreeView('schemaProvider', {
 		'treeDataProvider' : provider,
-		'canSelectMany' : true,
+		'canSelectMany' : false,
 		'dragAndDropController' : provider,
 		'showCollapseAll' : true,
 		'manageCheckboxStateManually': false,
