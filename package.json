@@ -4,7 +4,7 @@
   "description": "Extension for an easy JSON schema development",
   "repository": {"url": "https://github.com/YAZsquirrel/fancyt-jsv"},
   "publisher": "yazsquirrel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.83.0"
   },
