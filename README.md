@@ -1,71 +1,48 @@
-# fancyt-jsv README
+# FancyT-JSV
 
-This is the README for your extension "fancyt-jsv". After writing up a brief description, we recommend including the following sections.
+### This extension is brought to ease the work of creation of multiple JSON schemas!
+
+<img src="./images/overview1.png" alt="drawing" width="900"/>
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### This extension provides a tree-like structure where roots are JSON schemas and leaves are JSON files, that are going to validate against its root schemas.
 
-For example if there is an image subfolder under your extension project workspace:
+<img src="./images/tree1.png" alt="drawing" width="200"/>
 
-\!\[feature X\]\(images/feature-x.png\)
+* You can add to tree your JSON schema files and then attach any JSON file to validate against schema!
+* You can add same file to different roots or as a root.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+* You can choose, what to validate: \
+To validate one file in a tree - press <img src="./src/media/dark/Validate.png" width="16"> button on the entry\
+To validate a json schema and every attached file to it - press <img src="./src/media/dark/Validate.png" width="16"> button on the root entry\
+To validate everything - press <img src="./src/media/dark/Validate.png" width="16"> button on the top of the tree
 
-## Requirements
+### It is possible, to change behaviour on validation, so:
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+<img src="./images/setting1.png" alt="drawing" width="500"/> 
 
-## Extension Settings
+* You can change behaviour of what would be validated: \
+<img src="./images/setting2.png" alt="drawing" width="400"/> \
+"All" - Everything will be validated (JSON schemas will be validated against its draft metaschema) \
+"Marked" - Only marked entries will be validated
+"Only (attached) JSONs" - JSON schemas in roots won't be validated
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+* You can change, if file should be validated while you changing it.
+* You can replace any root schema to another by pressing RMB on it and selecting "Change schema". \
+ If a chosen schema's already a root, every attached files will be reattached to a new root 
 
-For example:
+## Known issues
 
-This extension contributes the following settings:
+* Validation setting "Marked" works like "All"
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## Planned features
 
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
+* Drag'n'drop new files into tree
+* Drag'n'drop file links between roots
+* Drag'n'drop copy file links between roots
+* Make "Marked" setting work, so only marked entries will validate
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+1.0 is out!

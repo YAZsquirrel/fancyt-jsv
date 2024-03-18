@@ -1,8 +1,8 @@
 {
   "name": "fancyt-jsv",
   "displayName": "FancyT JSV",
-  "description": "nonr",
-  "version": "0.3.0",
+  "description": "Extension for an easy JSON schema development",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.83.0"
   },
