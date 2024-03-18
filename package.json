@@ -2,6 +2,8 @@
   "name": "fancyt-jsv",
   "displayName": "FancyT JSV",
   "description": "Extension for an easy JSON schema development",
+  "repository": {"url": "https://github.com/YAZsquirrel/fancyt-jsv"},
+  "publisher": "yazsquirrel",
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.83.0"
@@ -15,7 +17,7 @@
     "colors": [
       {
           "id": "editorManager.treeItemError",
-          "description": "Color for a TreeIteem label",
+          "description": "Color for a TreeItem label",
           "defaults": {
               "dark": "#ca6666", 
               "light": "#ca6666",
@@ -29,8 +31,8 @@
         "title": "Validate all JSON files against their schemas",
         "category": "Validate",
         "icon": {
-          "light": "src/media/light/Validate.png",
-          "dark": "src/media/dark/Validate.png"
+          "light": "images/media/light/Validate.png",
+          "dark": "images/media/dark/Validate.png"
         }
       },
       {
@@ -38,8 +40,8 @@
         "title": "Validate all JSON files attached to the schema",
         "category": "Validate",
         "icon": {
-          "light": "src/media/light/Validate.png",
-          "dark": "src/media/dark/Validate.png"
+          "light": "images/media/light/Validate.png",
+          "dark": "images/media/dark/Validate.png"
         }
       },
       {
@@ -47,8 +49,8 @@
         "title": "Validate a JSON file",
         "category": "Validate",
         "icon": {
-          "light": "src/media/light/Validate.png",
-          "dark": "src/media/dark/Validate.png"
+          "light": "images/media/light/Validate.png",
+          "dark": "images/media/dark/Validate.png"
         }
       },
       {
@@ -56,8 +58,8 @@
         "title": "Add schemas",
         "category": "Schema",
         "icon": {
-          "light": "src/media/light/Add.svg",
-          "dark": "src/media/dark/Add.svg"
+          "light": "images/media/light/Add.svg",
+          "dark": "images/media/dark/Add.svg"
         }
       },
       {
@@ -69,8 +71,8 @@
         "command": "schemaProvider.addJSONsOnButton",
         "title": "Attach JSON file to schema",
         "icon": {
-          "light": "src/media/light/Add.svg",
-          "dark": "src/media/dark/Add.svg"
+          "light": "images/media/light/Add.svg",
+          "dark": "images/media/dark/Add.svg"
         }
       },
       {
@@ -78,8 +80,8 @@
         "title": "Remove entry",
         "category": "Schema",
         "icon": {
-          "light": "src/media/light/Remove.svg",
-          "dark": "src/media/dark/Remove.svg"
+          "light": "images/media/light/Remove.svg",
+          "dark": "images/media/dark/Remove.svg"
         }
       },
       {
@@ -183,7 +185,7 @@
         {
           "id": "schemaProvider",
           "name": "Schemas",
-          "icon": "src/media/Icon.svg",
+          "icon": "images/media/Icon.svg",
           "contextualTitle": "Schema Tree"
         }
       ]

@@ -14,9 +14,9 @@
 * You can add same file to different roots or as a root.
 
 * You can choose, what to validate: \
-To validate one file in a tree - press <img src="./src/media/dark/Validate.png" width="16"> button on the entry\
-To validate a json schema and every attached file to it - press <img src="./src/media/dark/Validate.png" width="16"> button on the root entry\
-To validate everything - press <img src="./src/media/dark/Validate.png" width="16"> button on the top of the tree
+To validate one file in a tree - press <img src="./images/Validate.png" width="16"> button on the entry\
+To validate a json schema and every attached file to it - press <img src="./images/Validate.png" width="16"> button on the root entry\
+To validate everything - press <img src="./images/Validate.png" width="16"> button on the top of the tree
 
 ### It is possible, to change behaviour on validation, so:
 
