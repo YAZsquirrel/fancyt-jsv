@@ -3,15 +3,19 @@ import { EventEmitter, TreeItem, Event, workspace, TreeItemCollapsibleState, Uri
 import * as path from 'path';
 import { INode } from './INode';
 import * as fs from 'fs/promises';
-import { JSONNode } from './JSONNode';
-import ajv, { ValidateFunction } from 'ajv/dist/2020';
+import { JsonNode } from './JSONNode';
+import ajv, { ValidateFunction } from 'ajv/dist/2019';
 import { ValidationErrorsHandler } from './ValidationErrorsHandler';
-import * as metaSchema2019 from "ajv/dist/refs/json-schema-2019-09";
 
 export class SchemaNode implements INode {
+    clearReferences() {
+        this.refs.length = 0;
+    }
     //static treeProvider: Dia;
     
-    private jsons: JSONNode[] = [];
+    private jsons: JsonNode[] = [];
+    private refs: SchemaNode[] = [];
+    private parent: SchemaNode | null = null;
     public readonly collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.Expanded;
     private _schemaChanged: EventEmitter<void> = new EventEmitter<void>();
     readonly schemaChanged: Event<void> = this._schemaChanged.event;
@@ -19,11 +23,13 @@ export class SchemaNode implements INode {
     constructor(
         private label: string,
         private path: string,
-        private errorHandler?: ValidationErrorsHandler 
+        private errorHandler?: ValidationErrorsHandler
     ) {
-        errorHandler ??= new ValidationErrorsHandler();
-        errorHandler.setSchema = this;
-        this.schemaChanged.bind(errorHandler.onSchemaChange);
+        this.errorHandler = errorHandler;
+        if(!this.errorHandler) 
+           this.errorHandler = new ValidationErrorsHandler();
+        this.errorHandler.setSchema = this;
+        this.schemaChanged.bind(this.errorHandler.onSchemaChange);
 
         this.update();
     }
@@ -48,8 +54,61 @@ export class SchemaNode implements INode {
         return Uri.file(path.join(this.path));
     }
 
-    get attachedJsons(): JSONNode[] {
+    get attachedJsons(): JsonNode[] {
         return this.jsons;
+    }
+
+    get references(): SchemaNode[]{
+        return this.refs;
+    }
+
+    get Parent(): SchemaNode | null{
+        return this.parent;
+    }
+
+    addReferencesByUris(uris: Uri[])
+    {
+        for (let uri of uris) {
+            let isAttached = false;
+            for (let ref of this.refs) {
+                let refPath = ref.getPath;
+                if (isAttached = refPath === uri.fsPath) {
+                    window.showInformationMessage(`Reference at \"${uri.fsPath}\" was already attached to \"${this.label}\"!`);
+                    break;
+                }
+            }
+
+            if (isAttached) { continue; }
+            if (this.path === uri.fsPath) {
+                window.showWarningMessage(`Schema can't self reference schema: \"${this.label}\"!`);
+                continue;
+            }
+            let ref = new SchemaNode(path.basename(uri.fsPath), uri.fsPath);
+            this.refs.push(ref);
+            ref.parent = this;
+        }
+    }
+
+    addReferences(refs: SchemaNode[])
+    {
+        for (let ref of refs) {
+            let isAttached = false;
+            for (let newref of this.refs) {
+                let path = newref.getPath;
+                if (isAttached = path === ref.getPath) {
+                    break;
+                }
+            }
+
+            if (isAttached) { continue; }
+            if (this.path === ref.getPath) {
+                window.showWarningMessage(`Schema can't self reference to itself: \"${this.label}\"!`);
+                continue;
+            }
+            ref.parent = this;
+            this.refs.push(ref);
+        }
+
     }
 
     addJSONsByUris(uris: Uri[]) {
@@ -68,14 +127,14 @@ export class SchemaNode implements INode {
                 window.showWarningMessage(`You can't attach schema to itself: \"${this.label}\"!`);
                 continue;
             }
-            let json = new JSONNode(path.basename(uri.fsPath), uri.fsPath, this);
+            let json = new JsonNode(path.basename(uri.fsPath), uri.fsPath, this);
             this.attachedJsons.push(json);
         }
         this.errorHandler!.setJsons = this.jsons; 
 
     }
 
-    addJSONs(jsons: JSONNode[]) {
+    addJSONs(jsons: JsonNode[]) {
         for (let json of jsons) {
             let isAttached = false;
             for (let ajson of this.attachedJsons) {
@@ -110,12 +169,19 @@ export class SchemaNode implements INode {
         if (token && token?.isCancellationRequested)
             //return Promise.reject().catch(() => console.log('update canceled'));
             throw new CancellationError();      
-            
+        this.ajv = new ajv(
+            {
+                allErrors : true,
+                strict: true,
+                verbose: true,
+                inlineRefs: false
+            });
+
         await this.loadSchema(token);
         await this.setValidate(token);
     }
 
-    getParent(): INode | Promise<INode> | null {
+    getParent(): SchemaNode | Promise<SchemaNode> | null {
         return null;
     }
 
@@ -134,22 +200,38 @@ export class SchemaNode implements INode {
                 title: 'Opens this JSON file',
                 arguments: [Uri.file(this.path)]
             },
-            iconPath: Uri.file(path.join(__dirname, '../src/media/Schema.svg'))// new ThemeIcon("bracket", new ThemeColor("icon.foreground"))
+            iconPath: Uri.file(path.join(__dirname, '../images/media/Schema.svg'))
         };
     }
 
-    getChildren(): INode[] | Promise<INode[]> {
+    getChildrenJsons(): JsonNode[] | Promise<JsonNode[]> {
         return this.jsons;
+    }
+
+    getChildrenSchemas(): SchemaNode[] | Promise<SchemaNode[]> {
+        return this.refs;
+    }
+
+    getAllChildrenArray(array? : SchemaNode[]): SchemaNode[]
+    {
+        if (!array) array = [];
+        
+        if (this.refs.length === 0) 
+            return array;
+        
+        array = [...array, ...this.refs ];
+        
+        this.refs.forEach(ref => array = ref.getAllChildrenArray(array));
+        return array;
     }
 
     ajv:ajv = new ajv(
         {
             allErrors : true,
             strict: true,
-            verbose: true
-        })
-        .addMetaSchema(require("ajv/dist/refs/json-schema-2019-09"))
-        .addMetaSchema(require("ajv/dist/refs/json-schema-draft-07.json"));;
+            verbose: true,
+            inlineRefs: false
+        });
  
     private schema: any;
     private validate: ValidateFunction | undefined;
@@ -159,7 +241,10 @@ export class SchemaNode implements INode {
         if (!this.schema) {return;}
         
         try {
-            let schemaValidationResult = await this.ajv.validateSchema(this.schema, false);
+            let schemaValidationResult = 
+                await this.ajv
+                    .addSchema([...new Set(this.getAllChildrenArray().flat())].map(x => x.schema))
+                    .validateSchema(this.schema, false);
 
             if (token && token?.isCancellationRequested)
                 //return Promise.reject().catch(() => console.log('schema validation canceled'));
@@ -167,7 +252,7 @@ export class SchemaNode implements INode {
 
             let errors = this.ajv.errors;
             await this.errorHandler!.handleSchemaErrors(errors, token);
-
+            
             if (!schemaValidationResult)
             {
                 return;
@@ -219,7 +304,7 @@ export class SchemaNode implements INode {
         }
     }
 
-    async validateJson(jsonnode: JSONNode, token: CancellationToken | undefined): Promise<void>
+    async validateJson(jsonnode: JsonNode, token: CancellationToken | undefined): Promise<void>
     {
         try 
         { 
@@ -249,7 +334,7 @@ export class SchemaNode implements INode {
         }
     }
     
-    async validateOne(json: JSONNode, token: CancellationToken | undefined): Promise<void>
+    async validateOne(json: JsonNode, token: CancellationToken | undefined): Promise<void>
     {
         if (token && token?.isCancellationRequested)
             //return Promise.reject().catch(() => console.log('validate json canceled'));

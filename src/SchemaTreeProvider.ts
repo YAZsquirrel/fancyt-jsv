@@ -3,17 +3,24 @@
 import { TreeDataProvider, window,  TreeItem, CancellationToken, Event, ProviderResult, TreeDragAndDropController, DataTransfer, EventEmitter, ExtensionContext, Uri } from 'vscode'; 
 
 import { INode } from './INode';
-import {JSONNode} from './JSONNode';
+import {JsonNode} from './JSONNode';
 import { SchemaNode } from './SchemaNode';
 import * as path from 'path';
 import { ValidationErrorsHandler } from './ValidationErrorsHandler';
+import { SchemaRefTreeProvider } from './SchemaRefTreeProvider';
 
 export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndDropController<INode>
 {
+    RefTree: SchemaRefTreeProvider;
+
     constructor (private context: ExtensionContext) { 
+
+        this.RefTree = new SchemaRefTreeProvider(context, this);
         this.restoreSettings();  
-        ValidationErrorsHandler.setContext = this.context;     
+        ValidationErrorsHandler.setContext = this.context;
+
     }
+    
     private async restoreSettings()
     {
         let whichValidate = await this.context?.secrets.get('validateMarkedOrAll');
@@ -44,19 +51,27 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             this.addSchemasByUri(schemas!);
             
             this.tree?.forEach(async x => {
-                let jsons = x.jsonList.map(json => Uri.file(path.join(json)));
-                this.schemas.find(s => s.getPath === x.path)?.addJSONsByUris(jsons);
+                if (x.jsonList)
+                {
+                    let jsons = x.jsonList?.map(json => Uri.file(path.join(json)));
+                    this.schemas.find(s => s.getPath === x.path)?.addJSONsByUris(jsons);
+                }
+                if (x.refList)
+                {
+                    let refs = x.refList?.map(ref => Uri.file(path.join(ref)));
+                    this.schemas.find(s => s.getPath === x.path)?.addReferencesByUris(refs);
+                }
             });
             
         }
+        this.RefTree.refresh();
     }
     
     tree: TreeRoot[] = [];
 
     saveTree(){
-        this.context?.secrets.store('savedTree', JSON.stringify(this.tree));    
+        this.context?.secrets.store('savedTree', JSON.stringify(this.tree));
     }
-
 
     schemas: SchemaNode[] = [];
     dropMimeTypes = [];
@@ -78,7 +93,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
 
     getChildren(element?: INode | undefined): ProviderResult<INode[]> 
     {
-        return Promise.resolve(element ? element.getChildren() : this.schemas);
+        return Promise.resolve(element ? element.getChildrenJsons() : this.schemas);
     }
 
     getParent?(element: INode): ProviderResult<INode> 
@@ -105,7 +120,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             return;
         }
         
-        let paths: TreeRoot[] = uris.map((x): TreeRoot => {return {path: x.fsPath, jsonList: []};})
+        let paths: TreeRoot[] = uris.map((x): TreeRoot => {return {path: x.fsPath, refList: [], jsonList: []};})
                                     .filter(x => !this.tree.find(t => t.path === x.path), this);
         
         this.tree?.push(...paths);
@@ -145,7 +160,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         this.schemas.forEach(async x => await x.validateAll());
 	}
 
-    async validateOne(json: JSONNode): Promise<void> 
+    async validateOne(json: JsonNode): Promise<void> 
     {
         await json.validate();
     }
@@ -212,7 +227,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             if (exist = schemaPath === uri[0].fsPath) 
             {
                 let result = await window.showWarningMessage(
-                    `Schema \"${uri[0].fsPath}\" is already in the tree! What you want to move JSONs from \'${schema.getPath}\' to \'${uri[0].fsPath}\' and remove?`, 
+                    `Schema \"${uri[0].fsPath}\" is already in the tree! Do you want to move JSONs from \'${schema.getPath}\' to \'${uri[0].fsPath}\' and remove \'${schema.getPath}\'?`, 
                     "Yes", "No"); 
 
                 let idx2 = this.tree?.findIndex(x => x.path === schemaPath);
@@ -243,7 +258,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         if (!exist)
         {
             schema.changeSchema(path.basename(uri[0].fsPath), uri[0].fsPath);
-
+            schema.clearReferences();
             if (idx)
             {
                 this.tree[idx].path = uri[0].fsPath;
@@ -270,9 +285,9 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             node!.getErrorHandler!.clearErrors();
             this._onDidChangeTreeData.fire();
         }
-        else if (node instanceof JSONNode)
+        else if (node instanceof JsonNode)
         {
-            let json = node as JSONNode;
+            let json = node as JsonNode;
             let index = json.getSchema.attachedJsons.indexOf(json);
             json.getSchema.getErrorHandler!.clearJsonErrors(json.getUri);
 
@@ -411,8 +426,9 @@ type STPSettings = {
     
 };
 
-type TreeRoot = {
+export type TreeRoot = {
     path: string,
+    refList: string[],
     jsonList: string[]
 };
 

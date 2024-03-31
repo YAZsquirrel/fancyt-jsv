@@ -1,6 +1,6 @@
 /* eslint-disable curly */
 import { ErrorObject } from "ajv";
-import { JSONNode } from "./JSONNode";
+import { JsonNode } from "./JSONNode";
 import { SchemaNode } from "./SchemaNode";
 import { window, Uri, ExtensionContext, CancellationError } from "vscode";
 import * as vscode from 'vscode';
@@ -9,7 +9,7 @@ import { sleep } from "./tools";
 
 export class ValidationErrorsHandler implements vscode.Disposable
 {
-    constructor(private schema?: SchemaNode, private jsons?: JSONNode[])
+    constructor(private schema?: SchemaNode, private jsons?: JsonNode[])
     {
         this.subscribeToDocUpdate();
     }
@@ -20,7 +20,7 @@ export class ValidationErrorsHandler implements vscode.Disposable
 
     static validateOnChange: boolean = false; 
 
-    public set setJsons(value: JSONNode[]) {
+    public set setJsons(value: JsonNode[]) {
         this.jsons = value;
     }
 
@@ -173,7 +173,7 @@ export class ValidationErrorsHandler implements vscode.Disposable
         }
     }
 
-    async handleJsonErrors(json: JSONNode, errors: ErrorObject[] | null | undefined, token: vscode.CancellationToken | undefined)
+    async handleJsonErrors(json: JsonNode, errors: ErrorObject[] | null | undefined, token: vscode.CancellationToken | undefined)
     {
         if (errors)
         {

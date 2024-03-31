@@ -2,8 +2,9 @@
 
 import { ExtensionContext, commands, window } from 'vscode';
 import { SchemaTreeProvider } from './SchemaTreeProvider';
+import { SchemaRefTreeProvider } from './SchemaRefTreeProvider';
 import { INode } from './INode';
-import { JSONNode } from './JSONNode';
+import { JsonNode } from './JSONNode';
 import { SchemaNode } from './SchemaNode';
 
 export function activate(context: ExtensionContext) {
@@ -16,10 +17,19 @@ export function activate(context: ExtensionContext) {
 		'manageCheckboxStateManually': false,
 	});
 	
+	let refProvider = provider.RefTree;
+	let refTreeView = window.createTreeView('schemaRefProvider', {
+		'treeDataProvider' : refProvider,
+		'canSelectMany' : false,
+		'dragAndDropController' : refProvider,
+		'showCollapseAll' : true,
+		'manageCheckboxStateManually': false,
+	});
 
 	let disposables = [
-		treeView,
+		treeView, refTreeView,
 		
+		// Schema Tree
 		// gui
 		commands.registerCommand('schemaProvider.addSchemas', async () => await provider.addSchemas()),
 		commands.registerCommand('schemaProvider.addJSONs', async () => await provider.addJSONsToSchema()),
@@ -33,9 +43,13 @@ export function activate(context: ExtensionContext) {
 		commands.registerCommand('schemaProvider.setValidateMarkedOrAll', async () => await provider.setIfToValidateMarkedOrAll()),
 
 		// Validation commands
-		commands.registerCommand('schemaProvider.validateOne', async (node: JSONNode) => await provider.validateOne(node)),
-		commands.registerCommand('schemaProvider.validateAll', async () => await provider.validateAll()),
+		commands.registerCommand('schemaProvider.validateOne', async (node: JsonNode) => await provider.validateOne(node)),
+		commands.registerCommand('schemaProvider.validateAll', () => provider.validateAll()),
 		commands.registerCommand('schemaProvider.validateAllAttached', async (schema: SchemaNode) => await provider.validateAllInSchema(schema)),
+
+		// Ref Tree
+		commands.registerCommand('schemaRefProvider.addReference', async (node: SchemaNode) => await refProvider.addReferences(node)),
+		commands.registerCommand('schemaRefProvider.removeReference', async (node: SchemaNode) => await refProvider.removeReference(node))
 	];
 
 	context.subscriptions.push(...disposables);

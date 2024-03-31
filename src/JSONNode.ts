@@ -4,7 +4,7 @@ import { INode } from './INode';
 import { SchemaNode } from './SchemaNode';
 import * as fs from 'fs/promises';
 
-export class JSONNode implements INode {
+export class JsonNode implements INode {
     public readonly collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
     private _jsonChanged: EventEmitter<void> = new EventEmitter<void>();
     readonly jsonChanged: Event<void> = this._jsonChanged.event;
@@ -16,6 +16,12 @@ export class JSONNode implements INode {
         
     ) {
         this.parse();
+    }
+    getChildrenJsons(): JsonNode[] | Promise<JsonNode[]> {
+        return [];
+    }
+    getChildrenSchemas(): SchemaNode[] | Promise<SchemaNode[]> {
+        return [];
     }
 
     get getLabel(){
@@ -56,7 +62,7 @@ export class JSONNode implements INode {
         this.json = JSON.parse(text);
     }
 
-    getParent(): INode | Promise<INode> {
+    getParent(): SchemaNode | Promise<SchemaNode> {
         return this.schema;
     }
     getTreeItem(): TreeItem | Promise<TreeItem> {
@@ -74,11 +80,8 @@ export class JSONNode implements INode {
             },
             //checkboxState: TreeItemCheckboxState.Unchecked,
 
-            iconPath: path.join(__dirname, "../src/media/Json.svg")
+            iconPath: path.join(__dirname, "../images/media/Json.svg")
         };
-    }
-    getChildren(): INode[] | Promise<INode[]> {
-        return [];
     }
 }
 

@@ -3,6 +3,7 @@
   "displayName": "FancyT JSV",
   "description": "Extension for an easy JSON schema development",
   "repository": {
+    "type": "git",
     "url": "https://github.com/YAZsquirrel/fancyt-jsv"
   },
   "publisher": "yazsquirrel",
@@ -10,6 +11,7 @@
   "engines": {
     "vscode": "^1.83.0"
   },
+  "keywords": ["json", "schema"],
   "categories": [
     "Other"
   ],
@@ -28,6 +30,24 @@
       }
     ],
     "commands": [
+      {
+        "command": "schemaRefProvider.addReference",
+        "title": "Add reference to schema",
+        "category": "Reference",
+        "icon": {
+          "light": "images/media/light/Add.svg",
+          "dark": "images/media/dark/Add.svg"
+        }
+      },
+      {
+        "command": "schemaRefProvider.removeReference",
+        "title": "Remove reference from schema",
+        "category": "Reference",
+        "icon": {
+          "light": "images/media/light/Remove.svg",
+          "dark": "images/media/dark/Remove.svg"
+        }
+      },
       {
         "command": "schemaProvider.validateAll",
         "title": "Validate all JSON files against their schemas",
@@ -173,6 +193,16 @@
           "command": "schemaProvider.validateAllAttached",
           "when": "view == schemaProvider && viewItem == schemaProvider.tree.schema",
           "group": "inline"
+        },
+        {
+          "command": "schemaRefProvider.addReference",
+          "when": "view == schemaRefProvider",
+          "group": "inline"
+        },
+        {
+          "command": "schemaRefProvider.removeReference",
+          "when": "view == schemaRefProvider && schemaRefProvider.tree.schema.parent != null",
+          "group": "inline"
         }
       ]
     },
@@ -183,12 +213,23 @@
       }
     ],
     "views": {
-      "explorer": [
+      "schemaTree": [
         {
           "id": "schemaProvider",
-          "name": "Schemas",
+          "name": "Schema Tree"
+        },
+        {
+          "id": "schemaRefProvider",
+          "name": "Reference tree"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "schemaTree",
           "icon": "images/media/Icon.svg",
-          "contextualTitle": "Schema Tree"
+          "title": "Schema tree"
         }
       ]
     }
