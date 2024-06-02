@@ -1,5 +1,5 @@
 /* eslint-disable curly */
-import { EventEmitter, TreeItem, Event, workspace, TreeItemCollapsibleState, Uri, window, CancellationToken, CancellationError} from 'vscode';
+import { EventEmitter, TreeItem, Event, workspace, TreeItemCollapsibleState, Uri, window, CancellationToken, CancellationError } from 'vscode';
 import * as path from 'path';
 import { INode } from './INode';
 import * as fs from 'fs/promises';
@@ -12,7 +12,7 @@ export class SchemaNode implements INode {
         this.refs.length = 0;
     }
     //static treeProvider: Dia;
-    
+
     private jsons: JsonNode[] = [];
     private refs: SchemaNode[] = [];
     private parent: SchemaNode | null = null;
@@ -26,15 +26,15 @@ export class SchemaNode implements INode {
         private errorHandler?: ValidationErrorsHandler
     ) {
         this.errorHandler = errorHandler;
-        if(!this.errorHandler) 
-           this.errorHandler = new ValidationErrorsHandler();
+        if (!this.errorHandler)
+            this.errorHandler = new ValidationErrorsHandler();
         this.errorHandler.setSchema = this;
         this.schemaChanged.bind(this.errorHandler.onSchemaChange);
 
         this.update();
     }
 
-    onRemove(){
+    onRemove() {
         this.errorHandler?.dispose();
     }
 
@@ -58,16 +58,15 @@ export class SchemaNode implements INode {
         return this.jsons;
     }
 
-    get references(): SchemaNode[]{
+    get references(): SchemaNode[] {
         return this.refs;
     }
 
-    get Parent(): SchemaNode | null{
+    get Parent(): SchemaNode | null {
         return this.parent;
     }
 
-    addReferencesByUris(uris: Uri[])
-    {
+    addReferencesByUris(uris: Uri[]) {
         for (let uri of uris) {
             let isAttached = false;
             for (let ref of this.refs) {
@@ -89,8 +88,7 @@ export class SchemaNode implements INode {
         }
     }
 
-    addReferences(refs: SchemaNode[])
-    {
+    addReferences(refs: SchemaNode[]) {
         for (let ref of refs) {
             let isAttached = false;
             for (let newref of this.refs) {
@@ -130,7 +128,7 @@ export class SchemaNode implements INode {
             let json = new JsonNode(path.basename(uri.fsPath), uri.fsPath, this);
             this.attachedJsons.push(json);
         }
-        this.errorHandler!.setJsons = this.jsons; 
+        this.errorHandler!.setJsons = this.jsons;
 
     }
 
@@ -152,7 +150,7 @@ export class SchemaNode implements INode {
             json.schema = this;
             this.attachedJsons.push(json);
         }
-        this.errorHandler!.setJsons = this.jsons; 
+        this.errorHandler!.setJsons = this.jsons;
 
     }
 
@@ -161,23 +159,25 @@ export class SchemaNode implements INode {
         this.path = path;
         this.update();
         this.errorHandler!.setJsons = this.jsons;
-        this._schemaChanged.fire(); 
+        this._schemaChanged.fire();
     }
 
-    async update(token?: CancellationToken | undefined): Promise<void>
-    {
+    async update(token?: CancellationToken | undefined): Promise<void> {
         if (token && token?.isCancellationRequested)
-            //return Promise.reject().catch(() => console.log('update canceled'));
-            throw new CancellationError();      
+            throw new CancellationError();
         this.ajv = new ajv(
             {
-                allErrors : true,
+                allErrors: true,
                 strict: true,
                 verbose: true,
                 inlineRefs: false
             });
 
         await this.loadSchema(token);
+        // TODO remove when ref tree is fixed
+        if (this.parent && this.refs.length === 0)
+            return;
+
         await this.setValidate(token);
     }
 
@@ -194,7 +194,25 @@ export class SchemaNode implements INode {
             tooltip: this.path,
             description: 'JSON Schema',
             // checkboxState: TreeItemCheckboxState.Unchecked,
-            
+
+            command: {
+                command: 'vscode.open',
+                title: 'Opens this JSON file',
+                arguments: [Uri.file(this.path)]
+            },
+            iconPath: Uri.file(path.join(__dirname, '../images/media/Schema.svg'))
+        };
+    }
+
+    getRefTreeItem(): TreeItem | Promise<TreeItem> {
+
+        return {
+            label: this.label,
+            collapsibleState: this.collapsibleState,
+            contextValue: 'schemaProvider.tree.schema',
+            tooltip: this.path,
+            // checkboxState: TreeItemCheckboxState.Unchecked,
+
             command: {
                 command: 'vscode.open',
                 title: 'Opens this JSON file',
@@ -212,78 +230,77 @@ export class SchemaNode implements INode {
         return this.refs;
     }
 
-    getAllChildrenArray(array? : SchemaNode[]): SchemaNode[]
-    {
+    getAllChildrenArray(array?: SchemaNode[]): SchemaNode[] {
         if (!array) array = [];
-        
-        if (this.refs.length === 0) 
+
+        if (this.refs.length === 0)
             return array;
-        
-        array = [...array, ...this.refs ];
-        
+
+        array = [...array, ...this.refs];
+
         this.refs.forEach(ref => array = ref.getAllChildrenArray(array));
         return array;
     }
 
-    ajv:ajv = new ajv(
+    ajv: ajv = new ajv(
         {
-            allErrors : true,
+            allErrors: true,
             strict: true,
             verbose: true,
             inlineRefs: false
         });
- 
+
     private schema: any;
     private validate: ValidateFunction | undefined;
 
-    async setValidate(token: CancellationToken | undefined) : Promise<void>
-    {
-        if (!this.schema) {return;}
-        
+    async setValidate(token: CancellationToken | undefined): Promise<void> {
+        if (!this.schema) { return; }
+
         try {
-            let schemaValidationResult = 
+            let refSchemas = [...new Set(this.getAllChildrenArray().flat())];
+
+            refSchemas.forEach(async x => await x.loadSchema(token));
+
+            let schemaValidationResult =
                 await this.ajv
-                    .addSchema([...new Set(this.getAllChildrenArray().flat())].map(x => x.schema))
+                    .addSchema(refSchemas.map(x => x.schema))
                     .validateSchema(this.schema, false);
 
             if (token && token?.isCancellationRequested)
-                //return Promise.reject().catch(() => console.log('schema validation canceled'));
                 throw new CancellationError();
 
             let errors = this.ajv.errors;
             await this.errorHandler!.handleSchemaErrors(errors, token);
-            
-            if (!schemaValidationResult)
-            {
+
+            if (!schemaValidationResult) {
                 return;
             }
-            
+
             this.validate = this.ajv.compile(this.schema);
 
-            if (!this.validate) {throw new Error(`Schema's validate function was invalid \(${this.getLabel}\)`);}
-                
-        } catch (ex ) {
-            if (ex instanceof CancellationError) 
+            if (!this.validate) { throw new Error(`Schema's validate function was invalid \(${this.getLabel}\)`); }
+
+        } catch (ex) {
+            if (ex instanceof CancellationError)
                 throw ex;
-            else if (ex instanceof Error)
-            {
+            else if (ex instanceof Error) {
                 let message = (ex as Error).message;
 
                 // errorHandler.handleStrictErrors(message);
-                if (message.startsWith('strict mode:', 0))
-                {
+                if (message.startsWith('strict mode:', 0)) {
                     message = message.slice('strict mode:'.length + 1, message.indexOf('(strictTypes)'));
                 }
 
                 window.showErrorMessage(`Error \'${message}\' occured when tried to validate schema \'${this.label}\'.`);
             }
+
+            this.validate = undefined;
         }
     }
 
-    async loadSchema(token: CancellationToken | undefined): Promise<void>
-    {
+    async loadSchema(token: CancellationToken | undefined): Promise<void> {
         try {
-                      
+
             let content = await fs.readFile(this.getPath);
             let text = workspace.textDocuments.find(x => x.uri.fsPath === this.getPath)?.getText() ?? content.toString();
 
@@ -296,27 +313,19 @@ export class SchemaNode implements INode {
         }
         catch (ex) {
             if (ex instanceof CancellationError) throw ex;
-            else if (ex instanceof Error)
-            {
+            else if (ex instanceof Error) {
                 window.showErrorMessage(`Error \'${ex.message}\' occured when tried to parse schema \'${this.label}\'.`);
                 throw ex;
             }
         }
     }
 
-    async validateJson(jsonnode: JsonNode, token: CancellationToken | undefined): Promise<void>
-    {
-        try 
-        { 
-            
-            if (!this.validate) 
-            {
-                await this.update(token);
-            }
+    async validateJson(jsonnode: JsonNode, token: CancellationToken | undefined): Promise<void> {
+        try {
             if (token && token?.isCancellationRequested)
                 //return Promise.reject().catch(() => console.log('validate json inside canceled'));
                 throw new CancellationError();
-
+            if (!this.validate) return;
             let result = this.validate!(jsonnode.getJson);
             await this.errorHandler!.handleJsonErrors(jsonnode, this.validate!.errors, token);
 
@@ -326,24 +335,45 @@ export class SchemaNode implements INode {
         }
         catch (ex) {
             if (ex instanceof CancellationError) throw ex;
-            else if (ex instanceof Error){
+            else if (ex instanceof Error) {
                 window.showErrorMessage(`Error \'${(ex as Error).message}\'
                     occured when tried to validate \'${jsonnode.getLabel}\' against schema \'${this.label}\'.`);
                 throw ex;
             }
         }
     }
-    
-    async validateOne(json: JsonNode, token: CancellationToken | undefined): Promise<void>
-    {
+
+    async validateOne(json: JsonNode, token: CancellationToken | undefined): Promise<void> {
         if (token && token?.isCancellationRequested)
             //return Promise.reject().catch(() => console.log('validate json canceled'));
             throw new CancellationError();
 
-        await this.validateJson(json, token);
+        try {
+            if (!this.validate) {
+                await this.update(token);
+            }
+            await this.validateJson(json, token);
+        }
+        catch {
+            throw new CancellationError();
+        }
+        finally {
+            this.validate = undefined;
+        }
     }
 
-    async validateAll(): Promise<void>{
-        this.attachedJsons.forEach(async x => await this.validateJson(x, undefined));
+    async validateAll(): Promise<void> {
+        try {
+            if (!this.validate) {
+                await this.update(undefined);
+            }
+            this.attachedJsons.forEach(async x => await this.validateJson(x, undefined));
+        }
+        catch {
+
+        }
+        finally{
+            this.validate = undefined;
+        }
     }
 }

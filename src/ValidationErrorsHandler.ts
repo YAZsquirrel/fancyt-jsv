@@ -113,14 +113,18 @@ export class ValidationErrorsHandler implements vscode.Disposable
 
             let path = e.instancePath.slice(1, e.instancePath.length).split("/");
             
-            let range = typeof e.data === 'string' ? 
-                        this.getRangeInJson(td, path, e.data) : 
-                        this.getRangeInJson(td, path, JSON.stringify(e.data));
+            let range : vscode.Range | undefined = undefined;
+            if (e.data)
+                typeof e.data === 'string' ? 
+                            this.getRangeInJson(td, path, e.data) : 
+                            this.getRangeInJson(td, path, JSON.stringify(e.data));
+            else 
+                range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
 
             errorDiagnostics.push({
                 code: '',
                 message: errorMessage,
-                range: range,
+                range: range!,
                 severity: vscode.DiagnosticSeverity.Error,
                 source: ''
             });

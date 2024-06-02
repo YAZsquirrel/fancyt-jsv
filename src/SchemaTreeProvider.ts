@@ -47,6 +47,8 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
 
             this.tree = JSON.parse(savedTree);
 
+            console.log(this.tree);
+
             let schemas = this.tree.map(x => Uri.file(path.join(x.path)));
             this.addSchemasByUri(schemas!);
             

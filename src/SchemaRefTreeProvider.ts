@@ -24,9 +24,15 @@ export class SchemaRefTreeProvider implements TreeDataProvider<SchemaNode>, Tree
             return;
         }
 
-        let idx = parent?.references.findIndex(x => x === node);
+        let idx : number | undefined = parent?.references.findIndex(x => x === node);
         
         parent?.references.splice(idx!, 1);
+
+        let root = this.schemaTreeProv.tree.find(x => x.path === parent.getPath);
+        idx = root?.refList.findIndex(x => x === node.getPath);
+        root?.refList.splice(idx!, 1);
+        this.schemaTreeProv.saveTree();
+        
         this._onDidChangeTreeData.fire();
     }
 
@@ -93,7 +99,7 @@ export class SchemaRefTreeProvider implements TreeDataProvider<SchemaNode>, Tree
         throw new Error('Method not implemented.');
     }
     getTreeItem(element: SchemaNode): TreeItem | Thenable<TreeItem> {
-        return element.getTreeItem();
+        return element.getRefTreeItem();
     }
     getChildren(element?: SchemaNode | undefined): ProviderResult<SchemaNode[]> {
         return element?.getChildrenSchemas() ?? this.schemas;
