@@ -150,6 +150,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             this.schemas.push(schema);
         }
         this._onDidChangeTreeData.fire();
+        this.RefTree.refresh();
     }
 
 	async validateAllInSchema(schema: SchemaNode) 
@@ -249,6 +250,8 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
 
                     this.removeNode(schema);
                     this._onDidChangeTreeData.fire();
+        this.RefTree.refresh();
+
                 }
 
                 this.tree.splice(idx!, 1);
@@ -268,6 +271,7 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
         }
         this.saveTree();
         this._onDidChangeTreeData.fire();
+        this.RefTree.refresh();
                 
     }
 
@@ -286,6 +290,8 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
             }   
             node!.getErrorHandler!.clearErrors();
             this._onDidChangeTreeData.fire();
+        this.RefTree.refresh();
+
         }
         else if (node instanceof JsonNode)
         {
@@ -303,6 +309,8 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
                 this.tree[schema_idx!].jsonList.splice(idx!, 1);
             }
             this._onDidChangeTreeData.fire();
+        this.RefTree.refresh();
+
         }
         else 
         {
@@ -368,6 +376,8 @@ export class SchemaTreeProvider implements TreeDataProvider<INode>, TreeDragAndD
 
         this.saveTree();
         this._onDidChangeTreeData.fire();
+        this.RefTree.refresh();
+
     }
 
     private settings: STPSettings =

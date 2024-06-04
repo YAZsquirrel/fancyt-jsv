@@ -115,9 +115,9 @@ export class ValidationErrorsHandler implements vscode.Disposable
             
             let range : vscode.Range | undefined = undefined;
             if (e.data)
-                typeof e.data === 'string' ? 
-                            this.getRangeInJson(td, path, e.data) : 
-                            this.getRangeInJson(td, path, JSON.stringify(e.data));
+                range = (typeof e.data === 'string' ? 
+                            range = this.getRangeInJson(td, path, e.data) : 
+                            this.getRangeInJson(td, path, JSON.stringify(e.data)));
             else 
                 range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
 
