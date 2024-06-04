@@ -28,7 +28,7 @@ export class SchemaRefTreeProvider implements TreeDataProvider<SchemaNode>, Tree
         
         parent?.references.splice(idx!, 1);
 
-        let root = this.schemaTreeProv.tree.find(x => x.path === parent.getPath);
+        let root = this.schemaTreeProv.tree.find(x => x.path === parent?.getPath);
         idx = root?.refList.findIndex(x => x === node.getPath);
         root?.refList.splice(idx!, 1);
         this.schemaTreeProv.saveTree();
