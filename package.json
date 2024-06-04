@@ -199,7 +199,7 @@
         },
         {
           "command": "schemaRefProvider.addReference",
-          "when": "view == schemaRefProvider",
+          "when": "view == schemaRefProvider && viewItem == schemaRefProvider.tree.schema",
           "group": "inline"
         },
         {
@@ -232,7 +232,7 @@
         {
           "id": "schemaTree",
           "icon": "images/media/Icon.svg",
-          "title": "Schema tree"
+          "title": "FancyT Schema Validation Tool"
         }
       ]
     }

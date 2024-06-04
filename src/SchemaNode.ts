@@ -205,11 +205,11 @@ export class SchemaNode implements INode {
     }
 
     getRefTreeItem(): TreeItem | Promise<TreeItem> {
-
+        let contextValue = 'schemaRefProvider.tree.schema' + (this.parent === null ? '' : 'ref');
         return {
             label: this.label,
-            collapsibleState: this.collapsibleState,
-            contextValue: 'schemaProvider.tree.schema',
+            collapsibleState: this.parent === null ? this.collapsibleState : TreeItemCollapsibleState.None,
+            contextValue: contextValue,
             tooltip: this.path,
             // checkboxState: TreeItemCheckboxState.Unchecked,
 
